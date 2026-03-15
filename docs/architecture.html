@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>terraform-gcp-spanner | Architecture</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0b0c0b;color:#f5f2eb;font-family:'Courier New',Courier,monospace;line-height:1.7;padding:0}
+a{color:#c8420a;text-decoration:none}a:hover{text-decoration:underline}
+.container{max-width:1200px;margin:0 auto;padding:2rem}
+header{background:linear-gradient(135deg,#0b0c0b 0%,#1a1b1a 100%);border-bottom:2px solid #c8420a;padding:2rem 0}
+header .container{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+header h1{font-size:1.8rem;letter-spacing:1px}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:#1a1b1a;border:1px solid #333;border-radius:6px;padding:.4rem .8rem;font-size:.8rem}
+.badge img{height:18px}
+.section{margin:3rem 0}
+.section h2{font-size:1.4rem;color:#c8420a;border-bottom:1px solid #222;padding-bottom:.5rem;margin-bottom:1.5rem}
+.section h3{font-size:1.1rem;color:#f5f2eb;margin:1.5rem 0 .75rem}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}
+.card{background:#131413;border:1px solid #222;border-radius:8px;padding:1.25rem;transition:border-color .2s}
+.card:hover{border-color:#c8420a}
+.card h3{margin:0 0 .5rem;font-size:1rem;color:#c8420a}
+.card p{font-size:.85rem;color:#aaa}
+.card .stat{font-size:1.6rem;font-weight:bold;color:#f5f2eb}
+.diagram{background:#131413;border:1px solid #222;border-radius:8px;padding:2rem;overflow-x:auto}
+.diagram .row{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:.5rem;margin:.75rem 0}
+.diagram .box{background:#1a1b1a;border:1px solid #c8420a;border-radius:6px;padding:.75rem 1.25rem;text-align:center;font-size:.8rem;min-width:120px}
+.diagram .box.highlight{background:#c8420a;color:#fff;border-color:#c8420a}
+.diagram .arrow{color:#c8420a;font-size:1.2rem}
+table{width:100%;border-collapse:collapse;font-size:.85rem;margin:1rem 0}
+table th{text-align:left;padding:.6rem;background:#1a1b1a;color:#c8420a;border-bottom:2px solid #c8420a}
+table td{padding:.6rem;border-bottom:1px solid #1a1b1a}
+table tr:hover td{background:#131413}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:.4rem 0;padding-left:1.5rem;position:relative;font-size:.9rem}
+.checklist li::before{content:"[x]";position:absolute;left:0;color:#c8420a;font-weight:bold}
+code{background:#1a1b1a;padding:.15rem .4rem;border-radius:3px;font-size:.85rem;color:#c8420a}
+pre{background:#131413;border:1px solid #222;border-radius:8px;padding:1.25rem;overflow-x:auto;font-size:.82rem;line-height:1.6}
+footer{border-top:2px solid #c8420a;margin-top:4rem;padding:2rem 0;text-align:center;font-size:.8rem;color:#555}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:768px){.grid-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<div class="container">
+<div>
+<h1>terraform-gcp-spanner</h1>
+<p style="color:#aaa;font-size:.9rem;margin-top:.25rem">Globally-Distributed Database Infrastructure</p>
+</div>
+<div style="display:flex;gap:.75rem;align-items:center">
+<span class="badge"><img src="https://www.gstatic.com/devrel-devsite/prod/v0e0f589edd85502a40d78d7d0f2f25834f5f2f981ee4e9bc3ad30721d1c038af/cloud/images/favicons/onecloud/super_cloud.png" alt="GCP">Google Cloud Platform</span>
+<span class="badge">Terraform Module</span>
+</div>
+</div>
+</header>
+
+<div class="container">
+
+<div class="section">
+<h2>Executive Summary</h2>
+<p>This Terraform module provisions Google Cloud Spanner instances and databases with enterprise features. It supports regional and multi-region configurations, autoscaling with CPU and storage utilization targets, CMEK encryption for databases and backups, DDL schema management, PostgreSQL dialect, backup schedules with cron expressions, point-in-time recovery via version retention, drop and deletion protection, and IAM bindings at both instance and database levels with conditional access.</p>
+</div>
+
+<div class="section">
+<h2>Overview</h2>
+<div class="cards">
+<div class="card"><div class="stat">5</div><h3>Resource Types</h3><p>Instances, Databases, Backup Schedules, Instance IAM, Database IAM</p></div>
+<div class="card"><div class="stat">2</div><h3>Capacity Modes</h3><p>Fixed (nodes/processing units) and Autoscaling</p></div>
+<div class="card"><div class="stat">2</div><h3>SQL Dialects</h3><p>Google Standard SQL and PostgreSQL</p></div>
+<div class="card"><div class="stat">8</div><h3>Outputs</h3><p>Instance/database IDs, names, states, backup schedules</p></div>
+</div>
+</div>
+
+<div class="section">
+<h2>Architecture Diagram</h2>
+<div class="diagram">
+<div class="row">
+<div class="box highlight">Spanner Module</div>
+</div>
+<div class="row"><div class="arrow">|</div></div>
+<div class="row">
+<div class="box">Spanner Instance<br><small>Regional / Multi-Region</small></div>
+<div class="arrow">--&gt;</div>
+<div class="box">Spanner Database<br><small>DDL + Encryption</small></div>
+<div class="arrow">--&gt;</div>
+<div class="box">Backup Schedule<br><small>Cron + Retention</small></div>
+</div>
+<div class="row"><div class="arrow">|</div></div>
+<div class="row">
+<div class="box">Autoscaling<br><small>CPU + Storage Targets</small></div>
+<div class="box">Fixed Capacity<br><small>Nodes / PUs</small></div>
+<div class="box">CMEK Encryption<br><small>DB + Backup Keys</small></div>
+</div>
+<div class="row"><div class="arrow">|</div></div>
+<div class="row">
+<div class="box">PITR<br><small>Version Retention</small></div>
+<div class="box">PostgreSQL Dialect<br><small>Compatibility</small></div>
+<div class="box">Drop Protection<br><small>Deletion Safety</small></div>
+</div>
+<div class="row"><div class="arrow">|</div></div>
+<div class="row">
+<div class="box">Instance IAM<br><small>Conditional Access</small></div>
+<div class="arrow">&lt;--&gt;</div>
+<div class="box">Database IAM<br><small>Fine-Grained</small></div>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h2>Component Breakdown</h2>
+<div class="grid-2">
+<div>
+<h3>Instances (<code>google_spanner_instance</code>)</h3>
+<p>Created with regional or multi-region config strings. Capacity via fixed processing_units or num_nodes (mutually exclusive, validated), or autoscaling with min/max processing units/nodes and CPU/storage utilization targets. Force destroy for dev/test.</p>
+
+<h3>Databases (<code>google_spanner_database</code>)</h3>
+<p>DDL statements for schema management. CMEK encryption via KMS key name. Version retention period for PITR. PostgreSQL dialect support. Deletion protection and drop protection flags.</p>
+</div>
+<div>
+<h3>Backup Schedules (<code>google_spanner_backup_schedule</code>)</h3>
+<p>Cron-based scheduling with configurable retention duration. Optional encrypted backups with encryption type and KMS key. Depends on database creation.</p>
+
+<h3>IAM Bindings</h3>
+<p>Instance-level (<code>google_spanner_instance_iam_member</code>) and database-level (<code>google_spanner_database_iam_member</code>) bindings. Both support multiple members per binding and optional conditional access via CEL expressions.</p>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h2>Data Flow</h2>
+<div class="diagram">
+<div class="row">
+<div class="box">Application</div>
+<div class="arrow">--&gt;</div>
+<div class="box highlight">Spanner API</div>
+<div class="arrow">--&gt;</div>
+<div class="box">Instance (Compute)</div>
+</div>
+<div class="row"><div class="arrow">|</div></div>
+<div class="row">
+<div class="box">SQL Queries / Mutations</div>
+<div class="arrow">--&gt;</div>
+<div class="box">Database (Storage)</div>
+<div class="arrow">--&gt;</div>
+<div class="box">Encrypted at Rest (CMEK)</div>
+</div>
+<div class="row"><div class="arrow">|</div></div>
+<div class="row">
+<div class="box">Autoscaler Adjusts</div>
+<div class="arrow">--&gt;</div>
+<div class="box">Backup Created (Cron)</div>
+<div class="arrow">--&gt;</div>
+<div class="box">PITR Restore Available</td></div>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h2>Security Controls</h2>
+<table>
+<tr><th>Control</th><th>Implementation</th><th>Details</th></tr>
+<tr><td>Encryption at Rest</td><td>CMEK for databases and backups</td><td>Customer-managed Cloud KMS keys</td></tr>
+<tr><td>Access Control</td><td>Instance + database IAM</td><td>Fine-grained with conditional access</td></tr>
+<tr><td>Data Protection</td><td>Deletion + drop protection</td><td>Prevent accidental database deletion</td></tr>
+<tr><td>Point-in-Time Recovery</td><td>Version retention period</td><td>Configurable retention (default 1h)</td></tr>
+<tr><td>Backup Encryption</td><td>Encrypted backup schedules</td><td>Encryption type + KMS key per backup</td></tr>
+<tr><td>Input Validation</td><td>Mutually exclusive capacity</td><td>Cannot set both nodes and processing_units</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Industry Adaptation</h2>
+<div class="cards">
+<div class="card"><h3>Financial Services</h3><p>Multi-region instances for zero-RPO disaster recovery. CMEK encryption. Strong consistency for transaction integrity.</p></div>
+<div class="card"><h3>Gaming</h3><p>Autoscaling for burst traffic. Low-latency reads via regional configs. PostgreSQL dialect for migration ease.</p></div>
+<div class="card"><h3>Retail / E-Commerce</h3><p>Global distribution for multi-region availability. Automated backups with long retention. Drop protection for safety.</p></div>
+<div class="card"><h3>SaaS</h3><p>Multi-tenant database design with DDL management. Database-level IAM for tenant isolation. PITR for data recovery.</p></div>
+</div>
+</div>
+
+<div class="section">
+<h2>Production Readiness Checklist</h2>
+<ul class="checklist">
+<li>Enable CMEK encryption for databases and backups</li>
+<li>Enable deletion protection and drop protection</li>
+<li>Configure autoscaling with appropriate CPU/storage targets</li>
+<li>Set up backup schedules with adequate retention</li>
+<li>Configure version retention for point-in-time recovery</li>
+<li>Apply least-privilege IAM at database level</li>
+<li>Use multi-region config for disaster recovery</li>
+<li>Manage DDL through Terraform for schema versioning</li>
+<li>Validate capacity mode (nodes vs processing_units)</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Configuration Reference</h2>
+<table>
+<tr><th>Variable</th><th>Type</th><th>Default</th><th>Description</th></tr>
+<tr><td><code>project_id</code></td><td>string</td><td>required</td><td>GCP project ID (validated)</td></tr>
+<tr><td><code>instances</code></td><td>map(object)</td><td>{}</td><td>Instance configs with autoscaling</td></tr>
+<tr><td><code>databases</code></td><td>map(object)</td><td>{}</td><td>Databases with DDL, CMEK, dialect</td></tr>
+<tr><td><code>backup_schedules</code></td><td>map(object)</td><td>{}</td><td>Cron schedules with retention</td></tr>
+<tr><td><code>instance_iam_bindings</code></td><td>map(object)</td><td>{}</td><td>Instance-level IAM bindings</td></tr>
+<tr><td><code>database_iam_bindings</code></td><td>map(object)</td><td>{}</td><td>Database-level IAM bindings</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Deployment</h2>
+<pre>
+terraform init
+terraform plan -out=tfplan
+terraform apply tfplan
+
+# Connect to Spanner
+gcloud spanner databases execute-sql YOUR_DATABASE \
+  --instance=YOUR_INSTANCE \
+  --sql="SELECT 1" \
+  --project=YOUR_PROJECT_ID
+</pre>
+</div>
+
+<div class="section">
+<h2>Links</h2>
+<p>
+<a href="https://cloud.google.com/spanner/docs">Spanner Documentation</a> |
+<a href="https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/spanner_instance">Terraform Registry</a> |
+<a href="https://github.com/kogunlowo123/terraform-gcp-spanner">GitHub Repository</a> |
+<a href="https://cloud.google.com/spanner/docs/pitr">Point-in-Time Recovery</a>
+</p>
+</div>
+
+</div>
+
+<footer>
+<div class="container">
+<p>terraform-gcp-spanner | Architecture Documentation</p>
+<p style="margin-top:.5rem">Generated from source analysis | Terraform >= 1.3.0 | Google Provider >= 5.0</p>
+</div>
+</footer>
+</body>
+</html>
