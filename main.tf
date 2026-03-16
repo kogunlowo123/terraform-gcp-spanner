@@ -1,7 +1,3 @@
-###############################################################################
-# Spanner Instances
-###############################################################################
-
 resource "google_spanner_instance" "this" {
   for_each = var.instances
 
@@ -10,7 +6,7 @@ resource "google_spanner_instance" "this" {
   display_name     = each.value.display_name
   processing_units = each.value.autoscaling_config == null ? each.value.processing_units : null
   num_nodes        = each.value.autoscaling_config == null ? each.value.num_nodes : null
-  labels           = local.instance_labels[each.key]
+  labels           = merge(var.labels, each.value.labels)
   force_destroy    = each.value.force_destroy
   project          = var.project_id
 
@@ -30,10 +26,6 @@ resource "google_spanner_instance" "this" {
     }
   }
 }
-
-###############################################################################
-# Spanner Databases
-###############################################################################
 
 resource "google_spanner_database" "this" {
   for_each = var.databases
@@ -56,10 +48,6 @@ resource "google_spanner_database" "this" {
 
   depends_on = [google_spanner_instance.this]
 }
-
-###############################################################################
-# Backup Schedules
-###############################################################################
 
 resource "google_spanner_backup_schedule" "this" {
   for_each = var.backup_schedules
@@ -87,12 +75,18 @@ resource "google_spanner_backup_schedule" "this" {
   depends_on = [google_spanner_database.this]
 }
 
-###############################################################################
-# Instance IAM Bindings
-###############################################################################
-
 resource "google_spanner_instance_iam_member" "this" {
-  for_each = local.instance_iam_members
+  for_each = merge([
+    for binding_key, binding in var.instance_iam_bindings : {
+      for member in binding.members :
+      "${binding_key}/${member}" => {
+        instance  = binding.instance
+        role      = binding.role
+        member    = member
+        condition = binding.condition
+      }
+    }
+  ]...)
 
   instance = each.value.instance
   role     = each.value.role
@@ -109,12 +103,19 @@ resource "google_spanner_instance_iam_member" "this" {
   }
 }
 
-###############################################################################
-# Database IAM Bindings
-###############################################################################
-
 resource "google_spanner_database_iam_member" "this" {
-  for_each = local.database_iam_members
+  for_each = merge([
+    for binding_key, binding in var.database_iam_bindings : {
+      for member in binding.members :
+      "${binding_key}/${member}" => {
+        instance  = binding.instance
+        database  = binding.database
+        role      = binding.role
+        member    = member
+        condition = binding.condition
+      }
+    }
+  ]...)
 
   instance = each.value.instance
   database = each.value.database

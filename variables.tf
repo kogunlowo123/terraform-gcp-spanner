@@ -1,7 +1,3 @@
-###############################################################################
-# General
-###############################################################################
-
 variable "project_id" {
   description = "The GCP project ID where Spanner resources will be created."
   type        = string
@@ -18,15 +14,8 @@ variable "labels" {
   default     = {}
 }
 
-###############################################################################
-# Spanner Instances
-###############################################################################
-
 variable "instances" {
-  description = <<-EOT
-    Map of Spanner instances to create.
-    Key is the instance name.
-    EOT
+  description = "Map of Spanner instances to create, keyed by instance name."
   type = map(object({
     display_name     = string
     config           = string
@@ -59,15 +48,8 @@ variable "instances" {
   }
 }
 
-###############################################################################
-# Spanner Databases
-###############################################################################
-
 variable "databases" {
-  description = <<-EOT
-    Map of Spanner databases to create.
-    Key is the database name.
-    EOT
+  description = "Map of Spanner databases to create, keyed by database name."
   type = map(object({
     instance                 = string
     version_retention_period = optional(string, "1h")
@@ -91,15 +73,8 @@ variable "databases" {
   }
 }
 
-###############################################################################
-# Backup Schedules
-###############################################################################
-
 variable "backup_schedules" {
-  description = <<-EOT
-    Map of Spanner database backup schedules.
-    Key is a logical name for the backup schedule.
-    EOT
+  description = "Map of Spanner database backup schedules, keyed by logical name."
   type = map(object({
     instance  = string
     database  = string
@@ -114,15 +89,8 @@ variable "backup_schedules" {
   default = {}
 }
 
-###############################################################################
-# Instance IAM Bindings
-###############################################################################
-
 variable "instance_iam_bindings" {
-  description = <<-EOT
-    Map of IAM bindings for Spanner instances.
-    Key is a logical name.
-    EOT
+  description = "Map of IAM bindings for Spanner instances, keyed by logical name."
   type = map(object({
     instance = string
     role     = string
@@ -136,15 +104,8 @@ variable "instance_iam_bindings" {
   default = {}
 }
 
-###############################################################################
-# Database IAM Bindings
-###############################################################################
-
 variable "database_iam_bindings" {
-  description = <<-EOT
-    Map of IAM bindings for Spanner databases.
-    Key is a logical name.
-    EOT
+  description = "Map of IAM bindings for Spanner databases, keyed by logical name."
   type = map(object({
     instance = string
     database = string
